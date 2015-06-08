@@ -1,0 +1,95 @@
+		body {
+				background-color: white;
+				font-family: Helvetica, Arial, sans-serif;
+			}
+
+		h1 {
+			font-size: 24px;
+			margin: 0;
+		}
+
+		p {
+			font-size: 14px;
+			margin: 10px 0 0 0;
+		}
+
+		#linegraph {
+			fill: none;
+			stroke: lightgray;
+		}
+
+
+		#linegraph[category="-1.5"] {
+			fill: none;
+			stroke: #E60000;
+		}
+
+		#linegraph[category="-1"] {
+			fill: none;
+			stroke: #FF4D4D;
+		}
+
+		#linegraph[category="-0.5"] {
+			fill: none;
+			stroke: #FF9999;
+		}
+
+		#linegraph[category="0.5"]  {
+			fill: none;
+			stroke: #80CC80;
+		}
+
+		#linegraph[category="1"]  {
+			fill: none;
+			stroke: #33AD33;
+		}
+
+		#linegraph[category="1.5"]  {
+			fill: none;
+			stroke: #008A00;
+		}
+
+		svg {
+			background-color: white;
+		}
+
+		circle:hover {
+			fill: orange;
+		}
+
+		rect{
+			fill: none;
+		}
+
+		#starting_gl {
+			font-size: 12px;
+		}
+
+		.label {
+			font-size: 9px;
+			font-family: sans-serif;
+			stroke: gray;
+		}
+
+		.axis text {
+			font-family: sans-serif;
+			font-size: 11px;
+			stroke: gray;
+		}
+
+		.axis path,
+		.axis line {
+			fill: none;
+			stroke: lightgray;
+			shape-rendering: crispEdges;
+		}
+
+
+		.slider .handle {
+		  fill: black;
+		  stroke: #000;
+		  stroke-opacity: .5;
+		  stroke-width: 1.25px;
+		  cursor: crosshair;
+		}
+

@@ -1,0 +1,225 @@
+<!-- This version will try to incorporate the dispatch set from d3 in order to allow us to manipulate multiple functions simultaneously 
+gist: https://gist.github.com/catli/75bff2380e1e477fbd05
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Line Chart with Multiple Lines</title>
+		<script type="text/javascript" src="../d3.v3.js"></script>
+		<link rel="stylesheet" type="text/css" href="style.css">
+
+	</head>
+	<body>
+
+		<!--  load helper functions that create simulations from the data  -->
+		<script type="text/javascript" src = "../helper.js"> </script>		
+		<script> 
+
+			d3.select("body")
+				.append("h1")
+				.text("NWEA Typical Student Growth Trajectory 1st to 6th Grade")
+
+			d3.select("body")
+				.append("p")
+				.text("This visualization explores how student's starting point in first grade impact their grade level in sixth grade. Use the dropdown to select the discpline and the slider to select a student's starting point in first grade.")
+				.append("p")
+
+			// create the load and state change for dispatch 
+			var dispatch = d3.dispatch("load", "statechange");
+
+			// create the discipline var 
+			// TODO: replace with unique values in the data 
+			var disciplines = ["Mathematics","Reading"]
+
+			// define discipline dropdown location
+			var select = d3.select("body")
+			    .append("id")
+  				.append("select")
+  				.attr("class","discipline")
+
+  		// TODO: define the slider location
+			var slider = d3.select("body")
+				.append("div")
+				.attr("id","rit")
+
+			// enter option with the min, max value 
+			// along with the input label 
+			// slider.append("label")
+			// 		.attr("for","seed_rit")
+			// 		.text("one grade level below");
+
+			slider.append("input")
+					.attr("type","range")
+					.attr("min","-10")
+					.attr("max","10")
+					.attr("orient","vertical")
+					.attr("id","seed_rit");
+
+			slider.append("br");
+			// slider.append("label")
+			// 		.attr("for","seed_rit")
+			// 		.text("one grade level above")
+			// 		.append("br");
+
+			slider.append("label")
+					.attr("id","starting_gl")
+					.text("student starting at grade level");
+
+			// define scale
+			var h = 400,
+					w = 600,
+					padding = { top: 20, right: 10, bottom: 20,left: 10 };  //Top, right, bottom, left
+
+			// create ordinal x scale
+			var widthScale = d3.scale.ordinal()
+							.rangeBands([ 0, w- padding.left - padding.right  ]);
+
+			// create linear y 
+			var heightScale = d3.scale.linear()
+							.range([ 0, h - padding.top - padding.bottom ]);
+
+			// ordinal scale 
+			widthScale.domain(d3.range(1,7));
+
+			// linear - 5 is closest to top and -5 to bottom
+			heightScale.domain([2,-2]);
+
+			// define SVG 
+			var xAxis = d3.svg.axis()
+				.scale(widthScale)
+				.orient("bottom")
+				.tickFormat(d3.format("2s"));
+
+			var yAxis = d3.svg.axis()
+				.scale(heightScale)
+				.orient("right")
+				.tickFormat(d3.format("1s"));
+
+			// append svg to the dom with a transformed attribute 
+			var svg = d3.select("body")
+				.append("svg")
+				.attr("width", w)
+				.attr("height", h)
+				.append("g")
+	      .attr("transform", "translate(" + w/30 + "," + h/15  + ")");
+
+		  svg.append("g")
+		      .attr("class", "y axis")
+		      .call(yAxis);
+		      
+		  svg.append("g")    
+		  		.attr("class", "x axis")
+		      .call(xAxis);
+
+			svg.append("text")
+		    .attr("class", "y label")
+		    .attr("text-anchor", "end")
+		    .attr("y", -15)
+		    .attr("x", -20)
+		    .attr("dy", ".78em")
+    		.attr("transform", "rotate(-90)")
+    		.text("Grade Levels Below/Above Peers");
+
+
+			// call the csv data 
+			// then pass in the dispatched functions below 
+			d3.csv("nwea_expected_growth_map.csv", function(growth_data) {
+				d3.csv("nwea_ongrade_rit.csv", function(grade_data_all) {
+			  	
+			  	var seed_gl = 0
+					// use subset of fall data 
+					var grade_data = grade_data_all.filter(function(d) { 
+									return d.term  == "FA";
+								});
+
+					// create default simulated data
+					var simulation = createSimul(+seed_gl
+												,grade_data
+												,growth_data
+												,"Mathematics")	;
+
+					var path = drawPath(simulation); 
+
+					var rects = drawRect(simulation);
+					// dispatch the load state, which includes 
+						// menu and plot dispatch
+						// with statechange dispatch in each one
+					dispatch.load(grade_data,growth_data) ;
+
+					// dispatch.statechange(simulation);
+				})
+			})
+
+			// create menu dispatch specifying discipline dropdown action
+			dispatch.on("load.menu", function(grade_data,growth_data) {
+  			// create the div with a select in the DOM
+
+  			//on change dispatch statechange with newly simulated data 
+				select
+			    .on("change", function() { 
+		  			//call on existing seed rit stored in svg rect
+  					var seed_gl = d3.select("rect").attr("difference");
+
+			    	var simul = createSimul(+seed_gl,grade_data,growth_data,this.value);
+
+			    	resetDiscipline(simul);
+
+			      dispatch.statechange(simul) ;
+			     });
+
+				// enter available disciplines - default selection to math
+			  select.selectAll("option")
+    			.data(disciplines)
+    			.enter().append("option")
+    			.attr("value", function (d) { return d; }) 
+		      .text(function (d) { return d; }); 
+
+		    // when statechange dispatched, assign the discipline as the value property of the data 
+				dispatch.on("statechange.menu", function(d){
+					select.property("value",d[0].discipline) ; 
+				}) ;		      
+
+			})
+
+
+			// create the slider dispatch sypecifying seed rit score 
+			dispatch.on("load.slider", function(grade_data,growth_data ){
+					// create a var for the seed_rit class
+					var slider_rit = d3.select("#seed_rit") 
+
+					// TODO: create the data passed through on change
+					slider_rit.on("change", function() {
+						// select discpline var from the dom
+						var discipline = d3.select("rect").attr("discipline");
+						// create the simulated data with current selection
+			    	var simul = createSimul(+this.value/10,grade_data,growth_data,discipline);
+			    	// dispatch state change
+			    	dispatch.statechange(simul);
+					})	
+
+				// TODO: when statechange dispatched, assign the rit value as he value property of the data 
+				dispatch.on("statechange.slider", function(d){
+					//select.property("value",d[0].discipline) ; 
+					select.property("value",d[0].discipline) ;
+					transitionText(d);
+				}) ;		      
+
+			}) 
+
+			// create the plot dispatch 
+			dispatch.on("load.plot", function(grade_data,growth_data) {
+			
+				//transition y and height on plot change 
+				dispatch.on("statechange.plot",function(d) {
+					var rects = transitionRect(d);
+					var path = transitionPath(d);
+				});
+
+			})
+			// AFTER testing TODO: link the seed value slider to the dispatch
+
+		// create the bar plot dispatch commands 
+
+		</script>
+	</body>
